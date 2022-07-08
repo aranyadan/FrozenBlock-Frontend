@@ -1,0 +1,538 @@
+import React, { useMemo } from 'react';
+import Page from '../../components/Page';
+import styled from 'styled-components';
+import Label from '../../components/Label';
+import { getDisplayBalance } from '../../utils/formatBalance';
+import useTokenBalance from '../../hooks/useTokenBalance';
+import HomeImage from '../../assets/img/none.png';
+// import CashImage from '../../assets/img/logo_hermes4.png';
+import AvaxLogo from '../../assets/img/avaxlogo.png';
+// import Image from 'material-ui-image';
+// import styled from 'styled-components';
+// import { Alert } from '@material-ui/lab';
+import { createGlobalStyle } from 'styled-components';
+import CountUp from 'react-countup';
+// import CardIcon from '../../components/CardIcon';
+import TokenSymbol from '../../components/TokenSymbol';
+import useTombStats from '../../hooks/useTombStats';
+import useLpStats from '../../hooks/useLpStats';
+import useModal from '../../hooks/useModal';
+import useZap from '../../hooks/useZap';
+import useBondStats from '../../hooks/useBondStats';
+import usetShareStats from '../../hooks/usetShareStats';
+import useTotalValueLocked from '../../hooks/useTotalValueLocked';
+import { tomb as tombTesting, tShare as tShareTesting } from '../../tomb-finance/deployments/deployments.testing.json';
+import { tomb as tombProd, tShare as tShareProd } from '../../tomb-finance/deployments/deployments.mainnet.json';
+import { AddIcon } from '../../components/icons';
+
+import MetamaskFox from '../../assets/img/metamask-fox.svg';
+
+import { Box, Button, CardContent, Grid } from '@material-ui/core';
+import { Card as Card2 } from '@material-ui/core';
+import Card from '../../components/Card';
+import Modal from '../../components/Modal';
+import ZapModal from '../Bank/components/ZapModal';
+
+import { makeStyles } from '@material-ui/core/styles';
+import useTombFinance from '../../hooks/useTombFinance';
+
+const BackgroundImage = createGlobalStyle`
+  body {
+    background: rgb(67,34,198);
+    background: linear-gradient(0deg, rgba(67,34,198,1) 0%, rgba(0,159,255,1) 100%);
+    background-size: cover !important;
+  }
+`;
+
+const useStyles = makeStyles((theme) => ({
+  button: {
+    [theme.breakpoints.down('415')]: {
+      marginTop: '10px',
+    },
+  },
+}));
+
+const Home = () => {
+  const classes = useStyles();
+  const TVL = useTotalValueLocked();
+  const tombFtmLpStats = useLpStats('HERMES-AVAX-LP');
+  const tShareFtmLpStats = useLpStats('HSHARE-AVAX-LP');
+  const tombStats = useTombStats();
+  const tShareStats = usetShareStats();
+  const tBondStats = useBondStats();
+  const tombFinance = useTombFinance();
+
+  let tomb;
+  let tShare;
+  if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+    tomb = tombTesting;
+    tShare = tShareTesting;
+  } else {
+    tomb = tombProd;
+    tShare = tShareProd;
+  }
+
+  const buyTombAddress = 'https://app.pangolin.exchange/#/swap?outputCurrency=' + tomb.address;
+  const buyTShareAddress = 'https://app.pangolin.exchange/#/swap?outputCurrency=' + tShare.address;
+
+  const tombLPStats = useMemo(() => (tombFtmLpStats ? tombFtmLpStats : null), [tombFtmLpStats]);
+  const tshareLPStats = useMemo(() => (tShareFtmLpStats ? tShareFtmLpStats : null), [tShareFtmLpStats]);
+  const tombPriceInDollars = useMemo(
+    () => (tombStats ? Number(tombStats.priceInDollars).toFixed(2) : null),
+    [tombStats],
+  );
+  const tombPriceInFTM = useMemo(() => (tombStats ? Number(tombStats.tokenInFtm).toFixed(4) : null), [tombStats]);
+  const tombCirculatingSupply = useMemo(() => (tombStats ? String(tombStats.circulatingSupply) : null), [tombStats]);
+  const tombTotalSupply = useMemo(() => (tombStats ? String(tombStats.totalSupply) : null), [tombStats]);
+
+  const tSharePriceInDollars = useMemo(
+    () => (tShareStats ? Number(tShareStats.priceInDollars).toFixed(2) : null),
+    [tShareStats],
+  );
+  const tSharePriceInFTM = useMemo(
+    () => (tShareStats ? Number(tShareStats.tokenInFtm).toFixed(4) : null),
+    [tShareStats],
+  );
+  const tShareCirculatingSupply = useMemo(
+    () => (tShareStats ? String(tShareStats.circulatingSupply) : null),
+    [tShareStats],
+  );
+  const tShareTotalSupply = useMemo(() => (tShareStats ? String(tShareStats.totalSupply) : null), [tShareStats]);
+
+  const tBondPriceInDollars = useMemo(
+    () => (tBondStats ? Number(tBondStats.priceInDollars).toFixed(2) : null),
+    [tBondStats],
+  );
+  const tBondPriceInFTM = useMemo(() => (tBondStats ? Number(tBondStats.tokenInFtm).toFixed(4) : null), [tBondStats]);
+  const tBondCirculatingSupply = useMemo(
+    () => (tBondStats ? String(tBondStats.circulatingSupply) : null),
+    [tBondStats],
+  );
+  const tBondTotalSupply = useMemo(() => (tBondStats ? String(tBondStats.totalSupply) : null), [tBondStats]);
+
+  const tombLpZap = useZap({ depositTokenName: 'HERMES-AVAX-LP' });
+  const tshareLpZap = useZap({ depositTokenName: 'HSHARE-AVAX-LP' });
+
+  const tombBalance = useTokenBalance(tombFinance.TOMB);
+  const displayTombBalance = useMemo(() => getDisplayBalance(tombBalance), [tombBalance]);
+  const tombBalanceinDollars = (displayTombBalance * tombPriceInDollars).toFixed(2);
+
+  const tshareBalance = useTokenBalance(tombFinance.TSHARE);
+  const displayTshareBalance = useMemo(() => getDisplayBalance(tshareBalance), [tshareBalance]);
+  const tshareBalanceinDollars = (displayTshareBalance * tSharePriceInDollars).toFixed(2);
+
+  const tbondBalance = useTokenBalance(tombFinance.TBOND);
+  const displayTbondBalance = useMemo(() => getDisplayBalance(tbondBalance), [tbondBalance]);
+  const tbondBalanceinDollars = (displayTbondBalance * tBondPriceInFTM).toFixed(2);
+
+
+
+  const StyledLink = styled.a`
+    font-weight: 700;
+    text-decoration: none;
+    color: #E6E6E6;
+  `;
+
+  const Row = styled.div`
+  font-family: roboto, cursive;
+  align-items: center;
+  display: flex;
+  font-size: 16px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+  
+  const [onPresentTombZap, onDissmissTombZap] = useModal(
+    <ZapModal
+      decimals={18}
+      onConfirm={(zappingToken, tokenName, amount) => {
+        if (Number(amount) <= 0 || isNaN(Number(amount))) return;
+        tombLpZap.onZap(zappingToken, tokenName, amount);
+        onDissmissTombZap();
+      }}
+      tokenName={'HERMES-AVAX-LP'}
+    />,
+  );
+
+  const [onPresentTshareZap, onDissmissTshareZap] = useModal(
+    <ZapModal
+      decimals={18}
+      onConfirm={(zappingToken, tokenName, amount) => {
+        if (Number(amount) <= 0 || isNaN(Number(amount))) return;
+        tshareLpZap.onZap(zappingToken, tokenName, amount);
+        onDissmissTshareZap();
+      }}
+      tokenName={'HSHARE-AVAX-LP'}
+    />,
+  );
+
+  const [onPresentModal] = useModal(
+    <Modal>
+    <Box p={4}>
+              <h1 style={{ color: '#000000'}}>Welcome to</h1>
+              <h1 style={{ color: '#5271FF'}}>FrozenBlock Finance</h1>
+              <p>One of The first algorithmic stablecoin on Avalanche C Chain, pegged to the price of 1 AVAX via seigniorage.</p>
+              <p>
+                Stake your HERMES-AVAX LP in the Crete to earn HSHARE rewards.
+                Then stake your earned HSHARE in the Olympus to earn more HERMES!
+              </p>
+              <h3 style={{ color: '#000000', marginTop:'7%'}}> Audited by 0xGuard and KYC with Rugdoc</h3>
+              <StyledLink href='https://github.com/0xGuard-com/audit-reports/blob/master/hermes-finance/Hermes-Finance_final-audit-report.pdf'>Link to Audit Report</StyledLink>
+              <p></p>  
+              <img alt='0xguard' src='https://gateway.pinata.cloud/ipfs/QmYBxp5LCFmmYrZcgQQiznhsZkcfQhJ8dvwEgdBPorZ1A7?preview=1' width={200}/>
+              <p></p>
+              <StyledLink href='https://rugdoc.io/project/hermes-finance/'>Link to KYC</StyledLink>
+              <p></p>  
+              <img alt='kyc' src='https://gateway.pinata.cloud/ipfs/QmPDKWKCH8Zr5NHyQ5LzaG3H2xTiU7ui1MvoSagpLFQjWf?preview=1' width={200}/>
+
+            </Box>
+    </Modal>,
+  );
+
+  
+  return (
+    <Page>
+      <BackgroundImage />
+      <Grid container spacing={3}>
+      <Grid item xs={12} sm={6}>
+        {/* Logo */}
+        <Card>
+          <CardContent style={{ position: 'relative', color: 'black' }}>
+            <Box p={4}>
+              <h1 style={{ color: '#000000'}}>My balance</h1>
+            </Box>
+             <Balances>
+                <StyledBalanceWrapper>
+                  <TokenSymbol symbol="HERMES" />
+                  <StyledBalance>
+                      <StyledValue>{displayTombBalance}</StyledValue>
+                      <Label text=" HERMES available" />
+                      <span style={{ fontSize: '15px', marginLeft:'2%', color: 'black'}}> (${tombBalanceinDollars ? tombBalanceinDollars : '-.----'})</span>
+                  </StyledBalance>                  
+                </StyledBalanceWrapper>
+                <StyledBalanceWrapper>
+                  <TokenSymbol symbol="HSHARE" />
+                  <StyledBalance>
+                    <StyledValue>{displayTshareBalance}</StyledValue>
+                    <Label text=" HSHARE available" />
+                    <span style={{ fontSize: '15px', marginLeft:'2%', color: 'black' }}> (${tshareBalanceinDollars ? tshareBalanceinDollars : '-.----'})</span>
+                  </StyledBalance>
+                </StyledBalanceWrapper>
+                <StyledBalanceWrapper>
+                  <TokenSymbol symbol="HBOND" />
+                  <StyledBalance>
+                      <StyledValue>{displayTbondBalance}</StyledValue>
+                      <Label text=" HBOND available" />
+                      <span style={{ fontSize: '15px', marginLeft:'2%', color: 'black' }}> (${tbondBalanceinDollars ? tbondBalanceinDollars : '-.----'})</span>
+                  </StyledBalance>
+               </StyledBalanceWrapper>
+              </Balances>
+          </CardContent>
+          {/* <Paper>xs=6 sm=3</Paper> */}
+        </Card>
+        </Grid>
+        {/* Explanation text */}
+        <Grid item xs={12} sm={6}>
+            <Box p={4}>
+              <h1 style={{ color: '#000000'}}>Welcome to</h1>
+              <h1 style={{ color: '#FFFFFF'}}>FrozenBlock Finance</h1>
+              <Button color='primary' style={{ width : '30%', left :'80%'}} disabled={false} onClick={onPresentModal} variant="contained">
+                  Read More
+              </Button>
+            </Box>
+
+            <Grid item xs={20} sm={12} style={{ display: 'flex'}}>
+          <Card style={{ borderRadius: '20px', backgroundColor: '#161414'}}>
+            <CardContent style={{ margin: '20px', color: 'black'}}>
+              <h1>Total Value Locked</h1>
+              <CountUp style={{ fontSize: '40px' }} end={TVL} separator="," prefix="$" />
+            </CardContent>
+          </Card>
+        </Grid>
+
+
+
+        </Grid>
+       {/* TVL */}
+       
+
+
+
+         {/* Wallet */}
+       {/* <Grid item xs={12} sm={8}>
+          <Card style={{ height: '100%' }}>
+            <CardContent align="center" style={{ marginTop: '2.5%' }}>
+              {/* <h2 style={{ marginBottom: '20px' }}>Wallet Balance</h2> */}
+          {/*    <Button color="primary" href="/olympus" variant="contained" style={{ marginRight: '10px' }}>
+                Stake Now
+              </Button>
+              <Button href="/crete" variant="contained" style={{ marginRight: '10px' }}>
+                Farm Now
+              </Button>
+              <Button
+                color="primary"
+                target="_blank"
+                href={buyTombAddress}
+                variant="contained"
+                style={{ marginRight: '10px' }}
+                className={classes.button}
+              >
+                Buy HERMES
+              </Button>
+              <Button variant="contained" target="_blank" href={buyTShareAddress} className={classes.button}>
+                Buy HSHARE
+              </Button>
+            </CardContent>
+          </Card>
+       </Grid> */}
+
+        {/* TOMB */}
+        <Grid item xs={12} sm={4}>
+          <Card>
+            <CardContent style={{ position: 'relative' }}>
+               <Box align='center' mt={2}>
+                  <TokenSymbol symbol="HERMES" />
+              </Box>
+              <h2 style={{ position: 'relative', color: 'black' }} align='center'>HERMES</h2>
+              <p style={{ position: 'relative', color: 'black' }} align='center'>Current Price</p>
+              <Box align='center'>
+                <span style={{ fontSize: '30px' , color: 'black'}}>{tombPriceInFTM ? tombPriceInFTM : '-.----'} <img alt="logo" style={{ width: '30px'}} src={AvaxLogo} /></span>
+              </Box>
+              <Box align='center' marginBottom={3}>
+                <span style={{ fontSize: '16px', alignContent: 'flex-start', color: 'black' }}>
+                  ${tombPriceInDollars ? tombPriceInDollars : '-.--'}
+                </span>
+              </Box>
+              <Row>
+              <span style={{ fontSize: '14px', color: 'black' }}>
+                Market Cap:<br />
+                Circulating Supply:  <br />
+                Total Supply:
+              </span>
+              <span style={{ fontSize: '14px', color: 'black' }}>
+                ${(tombCirculatingSupply * tombPriceInDollars).toFixed(2)} <br />
+                {tombCirculatingSupply} <br />
+                {tombTotalSupply}
+              </span>
+              </Row>
+              <Box>
+              <Button
+                color="primary"
+                target="_blank"
+                href={buyTombAddress}
+                variant="contained"
+                style={{ marginTop: '10px', borderRadius:'10px', width: '100%'}}
+                className={classes.button}
+              >
+                Purchase
+              </Button>
+              </Box>
+            </CardContent>
+          </Card>
+          <Card2 style={{ background: "#161414", borderRadius: "15px", marginTop: "10px", height:'50px', alignItems: 'center'}}>
+            <CardContent align='center'>
+                 <Button style={{ position: 'relative', marginTop: "-12px"}}>
+                   <AddIcon />
+                <img alt="metamask fox" style={{ width: '30px'}} src={MetamaskFox} onClick={() => {
+                  tombFinance.watchAssetInMetamask('HERMES');
+                }} />
+                </Button>
+              </CardContent>
+              </Card2>
+
+        </Grid>
+
+        {/* TSHARE */}
+        <Grid  item xs={12} sm={4}>
+          <Card>
+            <CardContent style={{ position: 'relative' }}>
+               <Box align='center' mt={2}>
+                  <TokenSymbol symbol="HSHARE" />
+              </Box>
+              <h2 style={{ position: 'relative', color: 'black' }} align='center'>HSHARE</h2>
+              <p style={{ position: 'relative', color: 'black' }} align='center'>Current Price</p>
+              <Box align='center'>
+                <span style={{ fontSize: '30px', color: 'black' }}>{tSharePriceInFTM ? tSharePriceInFTM : '-.----'} <img alt="logo" style={{ width: '30px'}} src={AvaxLogo} /></span>
+              </Box>
+              <Box align='center' marginBottom={3}>
+                <span style={{ fontSize: '16px', color: 'black' }}>${tSharePriceInDollars ? tSharePriceInDollars : '-.--'}</span>
+              </Box>
+              <Row>
+              <span style={{ fontSize: '14px', color: 'black' }}>
+                Market Cap:  <br />
+                Circulating Supply:  <br />
+                Total Supply: 
+              </span>
+              <span style={{ fontSize: '14px', color: 'black' }}>
+                 ${(tShareCirculatingSupply * tSharePriceInDollars).toFixed(2)} <br />
+                 {tShareCirculatingSupply} <br />
+                 {tShareTotalSupply}
+              </span>
+              </Row>
+              <Box>
+              <Button
+                color="primary"
+                target="_blank"
+                href={buyTShareAddress}
+                variant="contained"
+                style={{ marginTop: '10px', borderRadius:'10px', width: '100%'}}
+                className={classes.button}
+              >
+               Purchase
+              </Button>
+              </Box>
+            </CardContent>
+          </Card>
+          <Card2 style={{ background: "#161414", borderRadius: "15px", marginTop: "10px", height:'50px', alignItems: 'center'}}>
+            <CardContent align='center'>
+                 <Button style={{ position: 'relative', marginTop: "-12px"}}>
+                   <AddIcon />
+                       <img alt="metamask fox" style={{ width: '30px'}} src={MetamaskFox} onClick={() => {
+                         tombFinance.watchAssetInMetamask('HSHARE');
+                       }} />
+                  </Button>
+              </CardContent>
+            </Card2>
+        </Grid>
+
+        {/* TBOND */}
+        <Grid item xs={12} sm={4}>
+          <Card>
+            <CardContent style={{ position: 'relative' }}>
+              <Box  align="center" mt={2}>
+                  <TokenSymbol symbol="HBOND" />
+              </Box>
+              <h2 style={{ position: 'relative', color: 'black' }} align="center">HBOND</h2>
+              <p style={{ position: 'relative', color: 'black' }} align="center">Current Price</p>
+              <Box align="center">
+                <span style={{ fontSize: '30px', color: 'black' }}>{tBondPriceInFTM ? tBondPriceInFTM : '-.----'} <img alt="logo" style={{ width: '30px'}} src={AvaxLogo} /></span>
+              </Box>
+              <Box align='center' marginBottom={3}>
+                <span style={{ fontSize: '16px', color: 'black' }}>${tBondPriceInDollars ? tBondPriceInDollars : '-.--'}</span>
+              </Box>
+              <Row>
+              <span style={{ fontSize: '14px', color: 'black' }}>
+                Market Cap:  <br />
+                Circulating Supply:  <br />
+                Total Supply: 
+              </span>
+              <span style={{ fontSize: '14px', color: 'black'}}>
+                 ${(tBondCirculatingSupply * tBondPriceInDollars).toFixed(2)} <br />
+                {tBondCirculatingSupply} <br />
+                 {tBondTotalSupply}
+              </span>
+              </Row>
+              <Box>
+              <Button
+                color="primary"
+                target="_blank"
+                href="/tartarus"
+                variant="contained"
+                style={{ marginTop: '10px', borderRadius:'10px', width: '100%'}}
+                className={classes.button}
+              >
+                Purchase or Redeem
+              </Button>
+              </Box>
+            </CardContent>
+          </Card>
+          <Card2 style={{ background: "#161414", borderRadius: "15px", marginTop: "10px", height:'50px', alignItems: 'center'}}>
+            <CardContent align='center'>
+                 <Button style={{ position: 'relative', marginTop: "-12px"}}>
+                   <AddIcon />
+                       <img alt="metamask fox" style={{ width: '30px'}} src={MetamaskFox} onClick={() => {
+                         tombFinance.watchAssetInMetamask('HBOND');
+                       }} />
+                  </Button>
+              </CardContent>
+            </Card2>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Card>
+            <CardContent align="center">
+              <h2 style={{ position: 'relative', color: 'black' }}>HERMES-AVAX LP</h2>
+              <Box mt={2}>
+                  <TokenSymbol symbol="HERMES-AVAX-LP" />
+              </Box>
+              <Box mt={2}>
+                <Button color="primary" disabled={false} onClick={onPresentTombZap} variant="contained">
+                  Zap In
+                </Button>
+              </Box>
+              <Box mt={2}>
+                <span style={{ fontSize: '26px', color: 'black' }}>
+                  {tombLPStats?.tokenAmount ? tombLPStats?.tokenAmount : '-.--'} HERMES /{' '}
+                  {tombLPStats?.ftmAmount ? tombLPStats?.ftmAmount : '-.--'} AVAX
+                </span>
+              </Box>
+              <Box>${tombLPStats?.priceOfOne ? tombLPStats.priceOfOne : '-.--'}</Box>
+              <span style={{ fontSize: '12px', color: 'black'}}>
+                Liquidity: ${tombLPStats?.totalLiquidity ? tombLPStats.totalLiquidity : '-.--'} <br />
+                Total supply: {tombLPStats?.totalSupply ? tombLPStats.totalSupply : '-.--'}
+              </span>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Card>
+            <CardContent align="center"style={{ position: 'relative', color: 'black' }}>
+              <h2>HSHARE-AVAX LP</h2>
+              <Box mt={2}>
+                  <TokenSymbol symbol="HSHARE-AVAX-LP" />
+              </Box>
+              <Box mt={2}>
+                <Button color="primary" onClick={onPresentTshareZap} variant="contained">
+                  Zap In
+                </Button>
+              </Box>
+              <Box mt={2}>
+                <span style={{ fontSize: '26px' }}>
+                  {tshareLPStats?.tokenAmount ? tshareLPStats?.tokenAmount : '-.--'} HSHARE /{' '}
+                  {tshareLPStats?.ftmAmount ? tshareLPStats?.ftmAmount : '-.--'} AVAX
+                </span>
+              </Box>
+              <Box>${tshareLPStats?.priceOfOne ? tshareLPStats.priceOfOne : '-.--'}</Box>
+              <span style={{ fontSize: '12px', color: 'black' }}>
+                Liquidity: ${tshareLPStats?.totalLiquidity ? tshareLPStats.totalLiquidity : '-.--'}
+                <br />
+                Total supply: {tshareLPStats?.totalSupply ? tshareLPStats.totalSupply : '-.--'}
+              </span>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Page>
+  );
+};
+
+const StyledValue = styled.div`
+  //color: ${(props) => props.theme.color.grey[300]};
+  font-size: 30px;
+  font-weight: 700;
+`;
+
+const StyledBalance = styled.div`
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-left: 2.5%;
+  margin-right: 2.5%;
+`;
+
+const Balances = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 2.5%;
+  margin-right: 2.5%;
+`;
+
+const StyledBalanceWrapper = styled.div`
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  margin: 1%;
+`;
+
+export default Home;
